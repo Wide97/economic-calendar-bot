@@ -10,7 +10,15 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.TimeZone;
 
 @Component
@@ -39,6 +47,7 @@ public class CalendarBot extends TelegramLongPollingBot {
 
             switch (msg.toLowerCase()) {
                 case "/start":
+                    salvaChatIdSeNuovo(chatId);
                     sendMessage(chatId, """
         👋 Benvenuto nel Calendario Economico Bot 📊
 
@@ -89,6 +98,11 @@ public class CalendarBot extends TelegramLongPollingBot {
                     """);
                     break;
 
+                case "/testnotifica":
+                    inviaEventiAdAltoImpattoATutti(); // chiama il metodo come se fosse schedulato
+                    break;
+
+
                 default:
                     sendMessage(chatId, "❌ Comando non riconosciuto. Scrivi /help per vedere i comandi disponibili.");
                     break;
@@ -132,6 +146,50 @@ public class CalendarBot extends TelegramLongPollingBot {
         String risposta = economicEventService.getCalendarioDiOggi();
         sendMessage(chatId, risposta);
     }
+
+    //@Scheduled(cron = "0 30 8 * * *")
+    public void inviaEventiAdAltoImpattoATutti() {
+        String messaggio = economicEventService.getEventiAdAltoImpatto();
+        List<Long> chatIds = getChatIdsFromFile();
+        for (Long chatId : chatIds) {
+            sendMessage(chatId, messaggio);
+            System.out.println("✅ Inviato a: " + chatId);
+        }
+    }
+
+
+    private List<Long> getChatIdsFromFile() {
+        try {
+            Path path = Paths.get("src/main/resources/chat_ids.txt");
+            if (!Files.exists(path)) return new ArrayList<>();
+            return Files.readAllLines(path).stream()
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .map(Long::parseLong)
+                    .distinct()
+                    .toList();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    private void salvaChatIdSeNuovo(Long chatId) {
+        List<Long> esistenti = getChatIdsFromFile();
+        if (!esistenti.contains(chatId)) {
+            try (BufferedWriter writer = new BufferedWriter(
+                    new FileWriter("src/main/resources/chat_ids.txt", true))) {
+                writer.write(chatId.toString());
+                writer.newLine();
+                System.out.println("💾 Salvato nuovo chatId: " + chatId);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
+
 
 }
 
