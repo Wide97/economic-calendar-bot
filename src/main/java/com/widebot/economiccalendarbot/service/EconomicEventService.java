@@ -44,6 +44,39 @@ public class EconomicEventService {
 
         return calendario.toString().isBlank() ? "Nessun evento trovato per oggi." : calendario.toString();
     }
+
+    public String getEventiPerValuta(String codiceValuta) {
+        StringBuilder calendario = new StringBuilder();
+        calendario.append("🗓️ Eventi economici per: ").append(codiceValuta.toUpperCase()).append("\n\n");
+
+        try {
+            Document doc = Jsoup.connect("https://www.investing.com/economic-calendar/")
+                    .userAgent("Mozilla/5.0")
+                    .get();
+
+            Elements eventi = doc.select(".js-event-item");
+
+            for (Element evento : eventi) {
+                String ora = evento.select(".time").text();
+                String titolo = evento.select(".event").text();
+                String valuta = evento.select(".left.flagCur.noWrap").text().trim();// es: "USD", "EUR"
+                int stelle = evento.select(".grayFullBullishIcon, .bullishIcon, .mediumImpactIcon").size();
+
+                if (!ora.isBlank() && !titolo.isBlank() && valuta.equalsIgnoreCase(codiceValuta)) {
+                    calendario.append("⏰ ").append(ora).append(" - ").append(titolo)
+                            .append(" (").append(stelle).append("⭐)\n");
+                }
+            }
+
+        } catch (IOException e) {
+            return "❌ Errore durante il recupero degli eventi economici per " + codiceValuta;
+        }
+
+        return calendario.toString().isBlank()
+                ? "Nessun evento trovato per " + codiceValuta.toUpperCase()
+                : calendario.toString();
+    }
+
     public String getEventiPerPaese(String paese) {
         StringBuilder calendario = new StringBuilder();
         calendario.append("📅 Eventi macro per ").append(paese).append(":\n\n");

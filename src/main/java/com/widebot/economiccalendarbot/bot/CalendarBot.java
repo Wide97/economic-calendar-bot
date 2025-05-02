@@ -1,12 +1,17 @@
 package com.widebot.economiccalendarbot.bot;
 
 import com.widebot.economiccalendarbot.service.EconomicEventService;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+
+import java.time.ZoneId;
+import java.util.TimeZone;
 
 @Component
 public class CalendarBot extends TelegramLongPollingBot {
@@ -35,13 +40,14 @@ public class CalendarBot extends TelegramLongPollingBot {
             switch (msg.toLowerCase()) {
                 case "/start":
                     sendMessage(chatId, """
-                        👋 Benvenuto nel Calendario Economico Bot!
-                        Digita uno dei seguenti comandi:
+                    👋 Benvenuto nel Calendario Economico Bot!
+                    Digita uno dei seguenti comandi:
 
-                        /oggi - Eventi economici di oggi
-                        /help - Mostra l'elenco dei comandi
-                        /send usa - Eventi macro solo degli Stati Uniti
-                        """);
+                    /oggi - Eventi economici di oggi
+                    /usa - Eventi solo degli Stati Uniti
+                    /eur - Eventi solo dell'Eurozona
+                    /help - Mostra l'elenco dei comandi
+                    """);
                     break;
 
                 case "/oggi":
@@ -49,19 +55,26 @@ public class CalendarBot extends TelegramLongPollingBot {
                     sendMessage(chatId, calendario);
                     break;
 
-                case "/help":
-                    sendMessage(chatId, """
-                        📌 Comandi disponibili:
-                        
-                        /start - Messaggio di benvenuto
-                        /oggi - Eventi economici previsti per oggi
-                        /help - Questo elenco
-                        """);
+                case "/usa":
+                    String eventiUsa = economicEventService.getEventiPerValuta("USD");
+                    sendMessage(chatId, eventiUsa);
                     break;
 
-                case "/usa":
-                    String eventiUsa = economicEventService.getEventiPerPaese("United States");
-                    sendMessage(chatId, eventiUsa);
+                case "/eur":
+                    String eventiEur = economicEventService.getEventiPerValuta("EUR");
+                    sendMessage(chatId, eventiEur);
+                    break;
+
+                case "/help":
+                    sendMessage(chatId, """
+                    📌 Comandi disponibili:
+
+                    /start - Messaggio di benvenuto
+                    /oggi - Eventi economici previsti per oggi
+                    /usa - Eventi USA (USD)
+                    /eur - Eventi EURO (EUR)
+                    /help - Questo elenco
+                    """);
                     break;
 
                 default:
@@ -70,6 +83,7 @@ public class CalendarBot extends TelegramLongPollingBot {
             }
         }
     }
+
 
     private void sendMessage(Long chatId, String text) {
         SendMessage message = new SendMessage();
@@ -90,6 +104,19 @@ public class CalendarBot extends TelegramLongPollingBot {
     @Override
     public String getBotToken() {
         return botToken;
+    }
+
+    @PostConstruct
+    public void init() {
+        // Imposta il timezone italiano
+        TimeZone.setDefault(TimeZone.getTimeZone(ZoneId.of("Europe/Rome")));
+    }
+
+    @Scheduled(cron = "0 0 8 * * *") // orario italiano grazie al TimeZone sopra
+    public void invioGiornaliero() {
+        Long chatId = 461782101L;
+        String risposta = economicEventService.getCalendarioDiOggi();
+        sendMessage(chatId, risposta);
     }
 
 }
