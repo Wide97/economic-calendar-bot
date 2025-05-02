@@ -98,10 +98,6 @@ public class CalendarBot extends TelegramLongPollingBot {
                     """);
                     break;
 
-                case "/testnotifica":
-                    inviaEventiAdAltoImpattoATutti(); // chiama il metodo come se fosse schedulato
-                    break;
-
 
                 default:
                     sendMessage(chatId, "❌ Comando non riconosciuto. Scrivi /help per vedere i comandi disponibili.");
@@ -147,7 +143,7 @@ public class CalendarBot extends TelegramLongPollingBot {
         sendMessage(chatId, risposta);
     }
 
-    //@Scheduled(cron = "0 30 8 * * *")
+    @Scheduled(cron = "0 30 8 * * *")
     public void inviaEventiAdAltoImpattoATutti() {
         String messaggio = economicEventService.getEventiAdAltoImpatto();
         List<Long> chatIds = getChatIdsFromFile();
