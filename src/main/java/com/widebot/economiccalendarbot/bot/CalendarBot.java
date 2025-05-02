@@ -40,15 +40,21 @@ public class CalendarBot extends TelegramLongPollingBot {
             switch (msg.toLowerCase()) {
                 case "/start":
                     sendMessage(chatId, """
-                    👋 Benvenuto nel Calendario Economico Bot!
-                    Digita uno dei seguenti comandi:
+        👋 Benvenuto nel Calendario Economico Bot 📊
 
-                    /oggi - Eventi economici di oggi
-                    /usa - Eventi solo degli Stati Uniti
-                    /eur - Eventi solo dell'Eurozona
-                    /help - Mostra l'elenco dei comandi
-                    """);
+        Questo bot ti permette di ricevere, direttamente qui su Telegram, gli eventi economici rilevanti ogni giorno.
+
+        ✏️ *Comandi disponibili:*
+        • /oggi → Tutti gli eventi economici di oggi
+        • /usa → Solo eventi in USD (USA)
+        • /eur → Solo eventi in EUR (Eurozona)
+        • /top → Eventi ad alto impatto (⭐⭐⭐)
+        • /help → Rivedi questo elenco
+
+        📩 *Consiglio:* Aggiungi questo bot ai tuoi preferiti o fissalo in alto per consultarlo ogni mattina prima di tradare!
+        """);
                     break;
+
 
                 case "/oggi":
                     String calendario = economicEventService.getCalendarioDiOggi();
@@ -65,6 +71,11 @@ public class CalendarBot extends TelegramLongPollingBot {
                     sendMessage(chatId, eventiEur);
                     break;
 
+                case "/top":
+                    String topEventi = economicEventService.getEventiAdAltoImpatto();
+                    sendMessage(chatId, topEventi);
+                    break;
+
                 case "/help":
                     sendMessage(chatId, """
                     📌 Comandi disponibili:
@@ -73,6 +84,7 @@ public class CalendarBot extends TelegramLongPollingBot {
                     /oggi - Eventi economici previsti per oggi
                     /usa - Eventi USA (USD)
                     /eur - Eventi EURO (EUR)
+                    /top - Eventi ad alto impatto ⭐⭐⭐
                     /help - Questo elenco
                     """);
                     break;
@@ -89,12 +101,14 @@ public class CalendarBot extends TelegramLongPollingBot {
         SendMessage message = new SendMessage();
         message.setChatId(chatId.toString());
         message.setText(text);
+        message.setParseMode("Markdown");
         try {
             execute(message);
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
     }
+
 
     @Override
     public String getBotUsername() {
