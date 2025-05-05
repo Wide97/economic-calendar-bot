@@ -1,13 +1,23 @@
 package com.widebot.economiccalendarbot.bot;
 
 import com.widebot.economiccalendarbot.service.EconomicEventService;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramWebhookBot;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.TimeZone;
 
 /**
  * Bot Telegram collegato al calendario economico.
@@ -61,6 +71,53 @@ public class CalendarBot extends TelegramWebhookBot {
             default -> buildMessage(chatId, "❌ Comando non riconosciuto. Scrivi /help per vedere i comandi disponibili.");
         };
     }
+
+   // @Scheduled(cron = "0 0 8 * * *")
+   @Scheduled(cron = "0 */2 * * * *")
+   public void invioEventiAdAltoImpattoATutti() {
+        String messaggio = economicEventService.getEventiAdAltoImpatto();
+        List<Long> chatIds = getChatIdsFromFile();
+
+        for (Long chatId : chatIds) {
+            SendMessage msg = new SendMessage();
+            msg.setChatId(chatId.toString());
+            msg.setText(messaggio);
+            msg.setParseMode("Markdown"); // opzionale, se vuoi usare grassetto, emoji, ecc.
+
+            try {
+                execute(msg);
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.out.println("❌ Errore nell'invio automatico a: " + chatId);
+            }
+
+            System.out.println("✅ Evento inviato a: " + chatId);
+        }
+    }
+
+    private List<Long> getChatIdsFromFile() {
+        Path path = Paths.get("src/main/resources/chat_ids.txt");
+        if (!Files.exists(path)) return new ArrayList<>();
+
+        try {
+            return Files.readAllLines(path).stream()
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .map(Long::parseLong)
+                    .distinct()
+                    .toList();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    @PostConstruct
+    public void init() {
+        TimeZone.setDefault(TimeZone.getTimeZone("Europe/Rome"));
+    }
+
+
 
     /**
      * Risposta personalizzata per il comando /start
