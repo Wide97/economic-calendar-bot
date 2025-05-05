@@ -2,26 +2,31 @@ package com.widebot.economiccalendarbot.service;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 
 @Service
 public class ScreenshotService {
 
-    @Value("${SCREENSHOT_API_KEY}")
+    @Value("${screenshot.api.key}")
     private String apiKey;
 
     public String getScreenshotUrlForPair(String pair) {
-        try {
-            String url = "https://www.tradingview.com/chart/?symbol=FX:" + pair.toUpperCase();
+        String tradingViewSymbol = switch (pair.toUpperCase()) {
+            case "EURUSD" -> "FX:EURUSD";
+            case "GBPUSD" -> "FX:GBPUSD";
+            case "XAUUSD" -> "OANDA:XAUUSD";
+            case "BTCUSD" -> "BITSTAMP:BTCUSD";
+            case "US500" -> "OANDA:SPX500USD";
+            case "US100" -> "OANDA:NAS100USD";
+            case "GER40" -> "OANDA:GER30EUR";
+            default -> null;
+        };
 
-            return "https://api.apiflash.com/v1/urltoimage?" +
-                    "access_key=" + apiKey +
-                    "&url=" + URLEncoder.encode(url, StandardCharsets.UTF_8) +
-                    "&width=1280&height=720&format=jpeg";
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+        if (tradingViewSymbol == null) return null;
+
+        String chartUrl = "https://www.tradingview.com/chart/?symbol=" + tradingViewSymbol;
+        return "https://shot.screenshotapi.net/screenshot"
+                + "?token=" + apiKey
+                + "&url=" + chartUrl
+                + "&output=image&file_type=png&wait_for_event=load";
     }
 }
