@@ -1,7 +1,9 @@
 package com.widebot.economiccalendarbot.bot;
 
 import com.widebot.economiccalendarbot.service.EconomicEventService;
+import com.widebot.economiccalendarbot.service.LottoCalculatorService;
 import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -25,6 +27,9 @@ import java.util.TimeZone;
  */
 @Component
 public class CalendarBot extends TelegramWebhookBot {
+
+    @Autowired
+    LottoCalculatorService lottoCalculatorService;
 
     @Value("${bot.token}")
     private String botToken;
@@ -55,22 +60,66 @@ public class CalendarBot extends TelegramWebhookBot {
 
         return switch (msg) {
             case "/start" -> handleStartCommand(chatId);
-            case "/help" -> buildMessage(chatId, """
-                    📌 *Comandi disponibili:*
 
-                    /oggi - Eventi economici previsti per *oggi*  
-                    /usa - Eventi in *dollari* (USD)  
-                    /eur - Eventi in *euro* (EUR)  
-                    /top - Eventi ad *alto impatto* ⭐⭐⭐  
-                    /help - Questo elenco
-                    """);
+            case "/help" -> buildMessage(chatId, """
+            📌 *Comandi disponibili:*
+
+            /oggi - Eventi economici previsti per *oggi*  
+            /usa - Eventi in *dollari* (USD)  
+            /eur - Eventi in *euro* (EUR)  
+            /top - Eventi ad *alto impatto* ⭐⭐⭐  
+            /lotto - Calcolo dei lotti consigliati  
+            /help - Questo elenco
+            """);
+
             case "/oggi" -> buildMessage(chatId, economicEventService.getCalendarioDiOggi());
             case "/usa" -> buildMessage(chatId, economicEventService.getEventiPerValuta("USD"));
             case "/eur" -> buildMessage(chatId, economicEventService.getEventiPerValuta("EUR"));
             case "/top" -> buildMessage(chatId, economicEventService.getEventiAdAltoImpatto());
-            default -> buildMessage(chatId, "❌ Comando non riconosciuto. Scrivi /help per vedere i comandi disponibili.");
+            case "/lotto" -> buildMessage(chatId, """
+    🧮 *Calcolatore Lotto*
+
+    ✏️ Formato comando:
+    `/lotto <pair> <capitale> <rischio%> <stoploss pip>`
+
+    📌 Esempio:
+    `/lotto EURUSD 2000 1.5 15`
+
+    👉 Significato:
+    - *EURUSD*: strumento (supportati: EURUSD, GBPUSD, XAUUSD, BTCUSD, US500, US100, GER40)
+    - *2000*: capitale del conto in EUR
+    - *1.5*: percentuale di rischio per il trade
+    - *15*: stop loss in pip o punti
+
+    Il bot calcolerà il lotto corretto in base a questi parametri 📊
+    """);
+
+
+            default -> {
+                if (msg.startsWith("/lotto ")) {
+                    String[] parts = msg.split(" ");
+                    if (parts.length == 5) {
+                        String pair = parts[1];
+                        try {
+                            double capitale = Double.parseDouble(parts[2]);
+                            double rischio = Double.parseDouble(parts[3]);
+                            double sl = Double.parseDouble(parts[4]);
+                            String risposta = lottoCalculatorService.calcolaLotti(pair, capitale, rischio, sl);
+                            yield buildMessage(chatId, risposta); // <-- attenzione: serve `yield` nei blocchi con `switch`
+                        } catch (NumberFormatException e) {
+                            yield buildMessage(chatId, "⚠️ I valori devono essere numerici. Esempio: /lotto EURUSD 2000 1.5 15");
+                        }
+                    } else {
+                        yield buildMessage(chatId, "❗ Formato non corretto. Usa: /lotto EURUSD 2000 1.5 15");
+                    }
+                }
+
+                yield buildMessage(chatId, "❌ Comando non riconosciuto. Scrivi /help per vedere i comandi disponibili.");
+            }
         };
+
     }
+
 
     @Scheduled(cron = "0 0 8 * * *")
    public void invioEventiAdAltoImpattoATutti() {
