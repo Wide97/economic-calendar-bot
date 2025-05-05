@@ -72,8 +72,7 @@ public class CalendarBot extends TelegramWebhookBot {
         };
     }
 
-   // @Scheduled(cron = "0 0 8 * * *")
-   @Scheduled(cron = "0 */2 * * * *")
+    @Scheduled(cron = "0 0 8 * * *")
    public void invioEventiAdAltoImpattoATutti() {
         String messaggio = economicEventService.getEventiAdAltoImpatto();
         List<Long> chatIds = getChatIdsFromFile();
