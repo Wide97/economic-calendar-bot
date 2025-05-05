@@ -1,54 +1,90 @@
 package com.widebot.economiccalendarbot.service;
 
-import org.springframework.stereotype.Service;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
-import java.util.HashMap;
-import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.configurationprocessor.json.JSONObject;
+import org.springframework.stereotype.Service;
 
 @Service
 public class LottoCalculatorService {
 
-    // Mappa dei valori pip per 1 lotto, per ogni strumento
-    private static final Map<String, Double> pipValues;
+    private final OkHttpClient client = new OkHttpClient();
+    @Value("${twelvedata.apikey}")
+    private String apiKey;
 
-    static {
-        pipValues = new HashMap<>();
-        pipValues.put("EURUSD", 10.0);     // classico FX
-        pipValues.put("GBPUSD", 10.0);
-        pipValues.put("XAUUSD", 1.0);      // oro
-        pipValues.put("BTCUSD", 1.0);      // stimato
-        pipValues.put("US500", 0.5);       // S&P 500
-        pipValues.put("US100", 0.2);       // Nasdaq
-        pipValues.put("GER40", 1.0);       // DAX (in EUR)
+    public String calcolaLotti(String pair, double capitale, double rischio, double sl) {
+        try {
+            double eurUsd = getEurUsdExchangeRate();
+
+            return switch (pair.toUpperCase()) {
+                case "EURUSD", "GBPUSD" -> calcolaForex(pair, capitale, rischio, sl, eurUsd);
+                case "XAUUSD" -> calcolaXauUsd(capitale, rischio, sl, eurUsd);
+                case "BTCUSD" -> calcolaBtcUsd(capitale, rischio, sl, eurUsd);
+                case "US500", "US100", "GER40" -> calcolaIndice(pair, capitale, rischio, sl, eurUsd);
+                default -> "❌ Pair non supportato: " + pair;
+            };
+
+        } catch (Exception e) {
+            return "❌ Errore nel calcolo: " + e.getMessage();
+        }
     }
 
-    /**
-     * Calcola i lotti consigliati per un trade.
-     *
-     * @param pair           es: "EURUSD"
-     * @param capitale       capitale disponibile (es: 2000)
-     * @param rischioPercent percentuale di rischio (es: 1.5)
-     * @param stopLossPip   SL in pip/point (es: 15)
-     * @return testo formattato con i risultati
-     */
-    public String calcolaLotti(String pair, double capitale, double rischioPercent, double stopLossPip) {
-        pair = pair.toUpperCase();
-        if (!pipValues.containsKey(pair)) {
-            return "❌ Pair non supportato: " + pair;
+    private double getEurUsdExchangeRate() throws Exception {
+        Request request = new Request.Builder()
+                .url("https://api.twelvedata.com/price?symbol=EUR/USD&apikey=" + apiKey)
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) throw new RuntimeException("Errore HTTP");
+            JSONObject json = new JSONObject(response.body().string());
+            return json.getDouble("price");
         }
+    }
 
-        double valorePip = pipValues.get(pair);
-        double rischioEuro = capitale * (rischioPercent / 100.0);
-        double lotti = rischioEuro / (stopLossPip * valorePip);
-        lotti = Math.round(lotti * 100.0) / 100.0; // arrotonda a 2 decimali
+    private String calcolaForex(String pair, double capitale, double rischio, double sl, double eurUsd) {
+        double pipValueUsd = 10.0; // 1 pip = $10 per 1.00 lotto standard
+        double rischioEur = capitale * rischio / 100;
+        double rischioUsd = rischioEur * eurUsd;
+        double lotto = rischioUsd / (pipValueUsd * sl);
 
+        return format(pair, rischioEur, sl, lotto);
+    }
+
+    private String calcolaXauUsd(double capitale, double rischio, double sl, double eurUsd) {
+        double pipValueUsd = 1.0; // 1 pip = $1 per 1.00 lotto
+        double rischioEur = capitale * rischio / 100;
+        double rischioUsd = rischioEur * eurUsd;
+        double lotto = rischioUsd / (pipValueUsd * sl);
+
+        return format("XAUUSD", rischioEur, sl, lotto);
+    }
+
+    private String calcolaBtcUsd(double capitale, double rischio, double sl, double eurUsd) {
+        double rischioEur = capitale * rischio / 100;
+        double rischioUsd = rischioEur * eurUsd;
+        double lotto = rischioUsd / sl;
+
+        return format("BTCUSD", rischioEur, sl, lotto);
+    }
+
+    private String calcolaIndice(String pair, double capitale, double rischio, double sl, double eurUsd) {
+        double rischioEur = capitale * rischio / 100;
+        double rischioUsd = rischioEur * eurUsd;
+        double lotto = rischioUsd / sl; // 1 punto = 1$ per 1 lotto standard
+
+        return format(pair, rischioEur, sl, lotto);
+    }
+
+    private String format(String pair, double rischioEur, double sl, double lotto) {
         return String.format("""
-                📈 *Calcolo Lotto per %s*
-                Capitale: €%.2f
-                Rischio: %.2f%% → €%.2f
-                Stop Loss: %.1f pip
-                Valore pip stimato: €%.2f
-                📌 *Lotti consigliati*: *%.2f*
-                """, pair, capitale, rischioPercent, rischioEuro, stopLossPip, valorePip, lotti);
+                📊 *Calcolo Lotto per %s*
+
+                Capitale a rischio: €%.2f
+                Stop loss: %.1f
+                📈 Lotto consigliato: %.2f
+                """, pair, rischioEur, sl, lotto);
     }
 }
