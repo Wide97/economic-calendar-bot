@@ -2,22 +2,26 @@ package com.widebot.economiccalendarbot.service;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @Service
 public class ScreenshotService {
 
-    @Value("${screenshot.api.key}")
-    private String screenshotApiKey;
+    @Value("${SCREENSHOT_API_KEY}")
+    private String apiKey;
 
-    /**
-     * Costruisce un link diretto all'immagine PNG del grafico su TradingView per il pair dato.
-     * Esempio: EURUSD → https://www.tradingview.com/chart/?symbol=FX:EURUSD
-     */
     public String getScreenshotUrlForPair(String pair) {
-        String tradingViewUrl = "https://www.tradingview.com/chart/?symbol=FX:" + pair.toUpperCase();
-        return "https://api.screenshotapi.net/screenshot" +
-                "?token=" + screenshotApiKey +
-                "&url=" + tradingViewUrl +
-                "&output=image&file_type=png&viewport=1920x1080&fresh=true";
+        try {
+            String url = "https://www.tradingview.com/chart/?symbol=FX:" + pair.toUpperCase();
+
+            return "https://api.apiflash.com/v1/urltoimage?" +
+                    "access_key=" + apiKey +
+                    "&url=" + URLEncoder.encode(url, StandardCharsets.UTF_8) +
+                    "&width=1280&height=720&format=jpeg";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }

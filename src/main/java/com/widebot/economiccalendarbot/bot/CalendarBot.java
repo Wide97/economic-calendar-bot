@@ -17,11 +17,13 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.util.*;
 
+/**
+ * Bot Telegram per calendario economico + calcolatore di lotto + screenshot grafici M15.
+ * Risponde ai comandi tramite webhook e invia ogni giorno automaticamente gli eventi economici ad alto impatto.
+ */
 @Component
 public class CalendarBot extends TelegramWebhookBot {
 
@@ -45,15 +47,10 @@ public class CalendarBot extends TelegramWebhookBot {
 
     @Override
     public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
-        if (update == null || !update.hasMessage() || !update.getMessage().hasText()) {
-            System.out.println("❗ Update nullo o non testuale ricevuto.");
-            return null;
-        }
+        if (update == null || !update.hasMessage() || !update.getMessage().hasText()) return null;
 
         Long chatId = update.getMessage().getChatId();
         String msg = update.getMessage().getText().trim().toLowerCase();
-
-        System.out.println("📩 Messaggio ricevuto: " + msg + " da chatId: " + chatId);
 
         switch (msg) {
             case "/start":
@@ -142,7 +139,6 @@ public class CalendarBot extends TelegramWebhookBot {
                             execute(photo);
                             return null;
                         } catch (Exception e) {
-                            e.printStackTrace();
                             return buildMessage(chatId, "❌ Errore nel recupero dello screenshot per " + pair);
                         }
                     } else {
@@ -154,24 +150,22 @@ public class CalendarBot extends TelegramWebhookBot {
         }
     }
 
-    // ✅ Invio automatico ogni giorno alle 8:00
+    /**
+     * Esegue ogni giorno alle 8 del mattino e invia gli eventi ad alto impatto.
+     */
     @Scheduled(cron = "0 0 8 * * *")
     public void invioEventiAdAltoImpattoATutti() {
         String messaggio = economicEventService.getEventiAdAltoImpatto();
         List<Long> chatIds = getChatIdsFromFile();
 
         for (Long chatId : chatIds) {
-            SendMessage msg = new SendMessage();
-            msg.setChatId(chatId.toString());
-            msg.setText(messaggio);
+            SendMessage msg = new SendMessage(chatId.toString(), messaggio);
             msg.setParseMode("Markdown");
-
             try {
                 execute(msg);
                 System.out.println("✅ Evento inviato a: " + chatId);
             } catch (Exception e) {
-                e.printStackTrace();
-                System.out.println("❌ Errore invio automatico a: " + chatId);
+                System.out.println("❌ Errore invio a: " + chatId);
             }
         }
     }
@@ -192,6 +186,21 @@ public class CalendarBot extends TelegramWebhookBot {
         }
     }
 
+    private void salvaChatIdSeNuovo(Long chatId) {
+        List<Long> esistenti = getChatIdsFromFile();
+        if (!esistenti.contains(chatId)) {
+            try {
+                Files.write(Paths.get("src/main/resources/chat_ids.txt"),
+                        Collections.singletonList(chatId.toString() + "\n"),
+                        Files.exists(Paths.get("src/main/resources/chat_ids.txt"))
+                                ? StandardOpenOption.APPEND
+                                : StandardOpenOption.CREATE);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     private SendMessage handleStartCommand(Long chatId) {
         SendMessage msg = buildMessage(chatId, """
                 👋 *Benvenuto nel Calendario Economico Bot!*
@@ -204,41 +213,13 @@ public class CalendarBot extends TelegramWebhookBot {
         return msg;
     }
 
-    private void salvaChatIdSeNuovo(Long chatId) {
-        List<Long> esistenti = getChatIdsFromFile();
-        if (!esistenti.contains(chatId)) {
-            try {
-                Files.write(Paths.get("src/main/resources/chat_ids.txt"),
-                        Collections.singletonList(chatId.toString() + "\n"),
-                        Files.exists(Paths.get("src/main/resources/chat_ids.txt"))
-                                ? java.nio.file.StandardOpenOption.APPEND
-                                : java.nio.file.StandardOpenOption.CREATE);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
     private SendMessage buildMessage(Long chatId, String text) {
-        SendMessage msg = new SendMessage();
-        msg.setChatId(chatId.toString());
-        msg.setText(text);
+        SendMessage msg = new SendMessage(chatId.toString(), text);
         msg.setParseMode("Markdown");
         return msg;
     }
 
-    @Override
-    public String getBotUsername() {
-        return botName;
-    }
-
-    @Override
-    public String getBotToken() {
-        return botToken;
-    }
-
-    @Override
-    public String getBotPath() {
-        return webhookPath;
-    }
+    @Override public String getBotUsername() { return botName; }
+    @Override public String getBotToken() { return botToken; }
+    @Override public String getBotPath() { return webhookPath; }
 }
