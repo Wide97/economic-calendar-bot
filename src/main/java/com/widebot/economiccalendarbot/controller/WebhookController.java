@@ -14,8 +14,9 @@ public class WebhookController {
         this.calendarBot = calendarBot;
     }
 
-    @PostMapping("${bot.webhookPath}")
+    @PostMapping("${bot.webhookPath}") // deve essere così, con POST
     public BotApiMethod<?> onUpdateReceived(@RequestBody Update update) {
         return calendarBot.onWebhookUpdateReceived(update);
     }
 }
+
