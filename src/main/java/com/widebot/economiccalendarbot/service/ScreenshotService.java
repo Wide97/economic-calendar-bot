@@ -17,7 +17,7 @@ public class ScreenshotService {
             case "BTCUSD" -> "BITSTAMP:BTCUSD";
             case "US500" -> "OANDA:SPX500USD";
             case "US100" -> "OANDA:NAS100USD";
-            case "GER40" -> "OANDA:GER30EUR";
+            case "GER40" -> "OANDA:GER40EUR";
             default -> null;
         };
 
