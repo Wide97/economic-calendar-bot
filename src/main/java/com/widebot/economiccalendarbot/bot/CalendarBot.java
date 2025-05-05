@@ -7,7 +7,12 @@ import org.telegram.telegrambots.bots.TelegramWebhookBot;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
 
+/**
+ * Bot Telegram collegato al calendario economico.
+ * Usa la modalità webhook e risponde ai comandi ricevuti via Telegram.
+ */
 @Component
 public class CalendarBot extends TelegramWebhookBot {
 
@@ -28,26 +33,58 @@ public class CalendarBot extends TelegramWebhookBot {
 
     @Override
     public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
-        if (update.hasMessage() && update.getMessage().hasText()) {
-            Long chatId = update.getMessage().getChatId();
-            String msg = update.getMessage().getText().trim().toLowerCase();
-            String risposta;
-
-            switch (msg) {
-                case "/start" -> risposta = "👋 Benvenuto! Scrivi /help per i comandi.";
-                case "/oggi" -> risposta = economicEventService.getCalendarioDiOggi();
-                case "/usa" -> risposta = economicEventService.getEventiPerValuta("USD");
-                case "/eur" -> risposta = economicEventService.getEventiPerValuta("EUR");
-                case "/top" -> risposta = economicEventService.getEventiAdAltoImpatto();
-                case "/help" -> risposta = "Comandi: /oggi /usa /eur /top /help";
-                default -> risposta = "❌ Comando non riconosciuto.";
-            }
-
-            SendMessage reply = new SendMessage(chatId.toString(), risposta);
-            reply.setParseMode("Markdown");
-            return reply;
+        if (update == null || !update.hasMessage() || !update.getMessage().hasText()) {
+            System.out.println("❗ Update nullo o non testuale ricevuto.");
+            return null;
         }
-        return null;
+
+        Long chatId = update.getMessage().getChatId();
+        String msg = update.getMessage().getText().trim().toLowerCase();
+
+        System.out.println("📩 Messaggio ricevuto: " + msg + " da chatId: " + chatId);
+
+        return switch (msg) {
+            case "/start" -> handleStartCommand(chatId);
+            case "/help" -> buildMessage(chatId, """
+                    📌 *Comandi disponibili:*
+
+                    /oggi - Eventi economici previsti per *oggi*  
+                    /usa - Eventi in *dollari* (USD)  
+                    /eur - Eventi in *euro* (EUR)  
+                    /top - Eventi ad *alto impatto* ⭐⭐⭐  
+                    /help - Questo elenco
+                    """);
+            case "/oggi" -> buildMessage(chatId, economicEventService.getCalendarioDiOggi());
+            case "/usa" -> buildMessage(chatId, economicEventService.getEventiPerValuta("USD"));
+            case "/eur" -> buildMessage(chatId, economicEventService.getEventiPerValuta("EUR"));
+            case "/top" -> buildMessage(chatId, economicEventService.getEventiAdAltoImpatto());
+            default -> buildMessage(chatId, "❌ Comando non riconosciuto. Scrivi /help per vedere i comandi disponibili.");
+        };
+    }
+
+    /**
+     * Risposta personalizzata per il comando /start
+     */
+    private SendMessage handleStartCommand(Long chatId) {
+        SendMessage msg = buildMessage(chatId, """
+                👋 *Benvenuto nel Calendario Economico Bot!*
+
+                Tutto è stato ripristinato ✅  
+                Usa /help per vedere i comandi disponibili.
+                """);
+        msg.setReplyMarkup(new ReplyKeyboardRemove(true));
+        return msg;
+    }
+
+    /**
+     * Metodo riutilizzabile per creare risposte testuali Markdown
+     */
+    private SendMessage buildMessage(Long chatId, String text) {
+        SendMessage msg = new SendMessage();
+        msg.setChatId(chatId.toString());
+        msg.setText(text);
+        msg.setParseMode("Markdown");
+        return msg;
     }
 
     @Override
