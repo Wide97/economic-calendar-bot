@@ -20,12 +20,12 @@ public class ScreenshotService {
     public String getScreenshotUrlForPair(String pair) {
         // Mappa dei simboli TradingView per ciascun asset
         String tradingViewSymbol = switch (pair.toUpperCase()) {
-            case "EURUSD" -> "FX:EURUSD";
+            case "EURUSD" -> "OANDA:EURUSD";
             case "GBPUSD" -> "FX:GBPUSD";
             case "XAUUSD" -> "OANDA:XAUUSD";
             case "BTCUSD" -> "BITSTAMP:BTCUSD";
             case "US500" -> "OANDA:SPX500USD";
-            case "US100" -> "NASDAQ:NDX"; // oppure FPMARKETS:US100 se preferisci
+            case "US100" -> "CURRENCYCOM:US100"; // oppure FPMARKETS:US100 se preferisci
             case "GER40" -> "FPMARKETS:GER40";
             default -> null;
         };
