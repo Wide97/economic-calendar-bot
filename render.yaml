@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: economic-calendar-bot
+    env: java
+    plan: free
+    buildCommand: ./mvnw clean install
+    startCommand: java -jar target/economiccalendarbot-0.0.1-SNAPSHOT.jar
+    envVars:
+      - key: BOT_TOKEN
+        value: # <-- lascia vuoto, lo imposti nella dashboard Render
+      - key: BOT_NAME
+        value: # <-- idem
+      - key: BOT_WEBHOOK_URL
+        value: # <-- es: https://economiccalendarbot.onrender.com/bot
