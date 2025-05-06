@@ -26,10 +26,32 @@ public class KeyboardFactory {
         return message;
     }
 
+    public SendMessage lottoPairKeyboard(Long chatId) {
+        SendMessage message = new SendMessage(chatId.toString(), "📊 *Calcolo Lotto*\n\nScegli il *pair*:");
+        message.setParseMode("Markdown");
+
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        rows.add(List.of(pairBtn("EURUSD"), pairBtn("GBPUSD"), pairBtn("XAUUSD")));
+        rows.add(List.of(pairBtn("BTCUSD"), pairBtn("US500"), pairBtn("US100")));
+        rows.add(List.of(pairBtn("GER40")));
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        markup.setKeyboard(rows);
+        message.setReplyMarkup(markup);
+        return message;
+    }
+
     private InlineKeyboardButton button(String pair) {
         InlineKeyboardButton btn = new InlineKeyboardButton();
         btn.setText(pair);
         btn.setCallbackData("screenshot_" + pair);
+        return btn;
+    }
+
+    private InlineKeyboardButton pairBtn(String pair) {
+        InlineKeyboardButton btn = new InlineKeyboardButton();
+        btn.setText(pair);
+        btn.setCallbackData("lotto_pair_" + pair);
         return btn;
     }
 }
