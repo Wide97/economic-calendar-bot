@@ -13,9 +13,10 @@ import org.telegram.telegrambots.bots.TelegramWebhookBot;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
-import org.telegram.telegrambots.meta.api.objects.InputFile;
-import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.*;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -57,39 +58,51 @@ public class CalendarBot extends TelegramWebhookBot {
 
     @Override
     public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
-        if (update == null || !update.hasMessage() || !update.getMessage().hasText()) return null;
+        if (update == null) return null;
 
-        Long chatId = update.getMessage().getChatId();
-        String msg = update.getMessage().getText().trim();
+        if (update.hasMessage() && update.getMessage().hasText()) {
+            Long chatId = update.getMessage().getChatId();
+            String msg = update.getMessage().getText().trim();
 
-        salvaChatIdSeNuovo(chatId);
+            salvaChatIdSeNuovo(chatId);
 
-        switch (msg.toLowerCase()) {
-            case "/start":
-                return handleStartCommand(chatId);
-            case "/help":
-                return helpMessage(chatId);
-            case "/oggi":
-                return buildMessage(chatId, economicEventService.getCalendarioDiOggi());
-            case "/usa":
-                return buildMessage(chatId, economicEventService.getEventiPerValuta("USD"));
-            case "/eur":
-                return buildMessage(chatId, economicEventService.getEventiPerValuta("EUR"));
-            case "/top":
-                return buildMessage(chatId, economicEventService.getEventiAdAltoImpatto());
-            case "/lotto":
-                return helpLottoMessage(chatId);
-            case "/screenshot":
-                return helpScreenshotMessage(chatId);
-            default:
-                if (msg.toLowerCase().startsWith("/lotto ")) {
-                    return handleLottoCommand(chatId, msg.split(" "));
-                }
-                if (msg.toLowerCase().startsWith("/screenshot ")) {
-                    return handleScreenshotCommand(chatId, msg.split(" "));
-                }
-                return buildMessage(chatId, "❌ Comando non riconosciuto. Scrivi /help per vedere l'elenco.");
+            switch (msg.toLowerCase()) {
+                case "/start":
+                    return handleStartCommand(chatId);
+                case "/help":
+                    return helpMessage(chatId);
+                case "/oggi":
+                    return buildMessage(chatId, economicEventService.getCalendarioDiOggi());
+                case "/usa":
+                    return buildMessage(chatId, economicEventService.getEventiPerValuta("USD"));
+                case "/eur":
+                    return buildMessage(chatId, economicEventService.getEventiPerValuta("EUR"));
+                case "/top":
+                    return buildMessage(chatId, economicEventService.getEventiAdAltoImpatto());
+                case "/lotto":
+                    return helpLottoMessage(chatId);
+                case "/screenshot":
+                    return helpScreenshotMessage(chatId);
+                default:
+                    if (msg.toLowerCase().startsWith("/lotto ")) return handleLottoCommand(chatId, msg.split(" "));
+                    if (msg.toLowerCase().startsWith("/screenshot ")) return handleScreenshotCommand(chatId, msg.split(" "));
+                    return buildMessage(chatId, "❌ Comando non riconosciuto. Scrivi /help per vedere l'elenco.");
+            }
         }
+
+        if (update.hasCallbackQuery()) {
+            String data = update.getCallbackQuery().getData();
+            Long chatId = update.getCallbackQuery().getMessage().getChatId();
+
+            if (data.startsWith("screenshot_")) {
+                String pair = data.replace("screenshot_", "");
+                return sendScreenshotByCallback(chatId, pair);
+            }
+
+            return buildMessage(chatId, "❌ Callback non riconosciuto.");
+        }
+
+        return null;
     }
 
     private BotApiMethod<?> handleLottoCommand(Long chatId, String[] parts) {
@@ -108,11 +121,12 @@ public class CalendarBot extends TelegramWebhookBot {
     }
 
     private BotApiMethod<?> handleScreenshotCommand(Long chatId, String[] parts) {
-        if (parts.length != 2) {
-            return buildMessage(chatId, "❗ Usa il formato: /screenshot EURUSD");
-        }
-
+        if (parts.length != 2) return buildMessage(chatId, "❗ Usa il formato: /screenshot EURUSD");
         String pair = parts[1].toUpperCase();
+        return sendScreenshotByCallback(chatId, pair);
+    }
+
+    private BotApiMethod<?> sendScreenshotByCallback(Long chatId, String pair) {
         try {
             String imageUrl = screenshotService.getScreenshotUrlForPair(pair);
             if (imageUrl == null) return buildMessage(chatId, "⚠️ Pair non supportato: " + pair);
@@ -171,6 +185,31 @@ public class CalendarBot extends TelegramWebhookBot {
         }
     }
 
+    private SendMessage helpScreenshotMessage(Long chatId) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId.toString());
+        message.setText("📸 Seleziona un asset per ricevere lo screenshot del grafico M15:");
+        message.setParseMode("Markdown");
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+
+        rows.add(List.of(createButton("EURUSD"), createButton("GBPUSD"), createButton("XAUUSD")));
+        rows.add(List.of(createButton("BTCUSD"), createButton("US500"), createButton("US100")));
+        rows.add(List.of(createButton("GER40")));
+
+        markup.setKeyboard(rows);
+        message.setReplyMarkup(markup);
+        return message;
+    }
+
+    private InlineKeyboardButton createButton(String pair) {
+        InlineKeyboardButton button = new InlineKeyboardButton();
+        button.setText(pair);
+        button.setCallbackData("screenshot_" + pair);
+        return button;
+    }
+
     private SendMessage handleStartCommand(Long chatId) {
         SendMessage msg = buildMessage(chatId, """
                 👋 *Benvenuto nel Calendario Economico Bot!*
@@ -205,23 +244,6 @@ public class CalendarBot extends TelegramWebhookBot {
 
                 📌 Esempio:
                 `/lotto EURUSD 2000 1.5 15`
-
-                👉 Significato:
-                - *pair*: strumento (es: EURUSD, XAUUSD, US500, ecc.)
-                - *capitale*: capitale in EUR
-                - *rischio%*: rischio per trade
-                - *SL pip*: distanza dello stop loss
-                """);
-    }
-
-    private SendMessage helpScreenshotMessage(Long chatId) {
-        return buildMessage(chatId, """
-                📸 *Screenshot Grafico*
-
-                ✏️ Usa il comando così:
-                `/screenshot EURUSD`
-
-                🔁 Supportati: EURUSD, GBPUSD, XAUUSD, BTCUSD, US500, US100, GER40
                 """);
     }
 
