@@ -1,1 +1,1 @@
-bot.chatids.path=/tmp/chat_ids.txt
+461782101
