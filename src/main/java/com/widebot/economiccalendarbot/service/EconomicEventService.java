@@ -18,7 +18,6 @@ import java.util.function.Predicate;
 public class EconomicEventService {
 
     private static final Logger log = LoggerFactory.getLogger(EconomicEventService.class);
-
     private static final String CALENDAR_URL = "https://www.investing.com/economic-calendar/";
 
     // Selettori CSS
@@ -58,7 +57,7 @@ public class EconomicEventService {
                 String paese = el.select(SELECTOR_COUNTRY_TITLE).attr("title").trim();
 
                 if (!ora.isBlank() && !titolo.isBlank()) {
-                    EconomicEvent evento = new EconomicEvent(ora, titolo, valuta, stelle, paese);
+                    EconomicEvent evento = new EconomicEvent(ora, valuta, paese, stelle, titolo); // ordine corretto
                     if (filtro.test(evento)) {
                         eventi.add(evento);
                     }
@@ -107,6 +106,4 @@ public class EconomicEventService {
         return parseEventi("📅 Eventi macro per " + nomePaese + ":",
                 ev -> ev.getPaese().equalsIgnoreCase(nomePaese), true);
     }
-
-
 }
