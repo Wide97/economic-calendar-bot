@@ -21,7 +21,7 @@ public class LottoCalculatorService {
 
             return switch (pair.toUpperCase()) {
                 case "EURUSD" -> calcolaForex(pair, capitale, rischio, sl, eurUsd);
-                 case "GBPUSD" -> calcolaForex(pair, capitale, rischio, sl, eurUsd);
+                case "GBPUSD" -> calcolaForex(pair, capitale, rischio, sl, eurUsd);
                 case "XAUUSD" -> calcolaXauUsd(capitale, rischio, sl, eurUsd);
                 case "BTCUSD" -> calcolaBtcUsd(capitale, rischio, sl, eurUsd);
                 case "US500", "US100", "GER40" -> calcolaIndice(pair, capitale, rischio, sl, eurUsd);

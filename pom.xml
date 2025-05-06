@@ -71,6 +71,13 @@
 			<artifactId>json</artifactId>
 			<version>20240303</version>
 		</dependency>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>1.18.32</version> <!-- ultima versione stabile a maggio 2025 -->
+			<scope>provided</scope>
+		</dependency>
+
 
 
 
