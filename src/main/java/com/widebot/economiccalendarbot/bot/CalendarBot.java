@@ -4,7 +4,8 @@ import com.widebot.economiccalendarbot.service.EconomicEventService;
 import com.widebot.economiccalendarbot.service.LottoCalculatorService;
 import com.widebot.economiccalendarbot.service.ScreenshotService;
 import jakarta.annotation.PostConstruct;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -20,16 +21,14 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
 
-/**
- * Bot Telegram per calendario economico + calcolatore di lotto + screenshot grafici M15.
- * Risponde ai comandi tramite webhook e invia ogni giorno automaticamente gli eventi economici ad alto impatto.
- */
 @Component
 public class CalendarBot extends TelegramWebhookBot {
 
-    @Autowired private EconomicEventService economicEventService;
-    @Autowired private LottoCalculatorService lottoCalculatorService;
-    @Autowired private ScreenshotService screenshotService;
+    private static final Logger logger = LoggerFactory.getLogger(CalendarBot.class);
+
+    private final EconomicEventService economicEventService;
+    private final LottoCalculatorService lottoCalculatorService;
+    private final ScreenshotService screenshotService;
 
     @Value("${bot.token}")
     private String botToken;
@@ -39,6 +38,17 @@ public class CalendarBot extends TelegramWebhookBot {
 
     @Value("${bot.webhookPath}")
     private String webhookPath;
+
+    @Value("${bot.chatids.path}")
+    private String chatIdsPath;
+
+    public CalendarBot(EconomicEventService economicEventService,
+                       LottoCalculatorService lottoCalculatorService,
+                       ScreenshotService screenshotService) {
+        this.economicEventService = economicEventService;
+        this.lottoCalculatorService = lottoCalculatorService;
+        this.screenshotService = screenshotService;
+    }
 
     @PostConstruct
     public void init() {
@@ -50,153 +60,113 @@ public class CalendarBot extends TelegramWebhookBot {
         if (update == null || !update.hasMessage() || !update.getMessage().hasText()) return null;
 
         Long chatId = update.getMessage().getChatId();
-        String msg = update.getMessage().getText().trim().toLowerCase();
+        String msg = update.getMessage().getText().trim();
 
-        switch (msg) {
+        salvaChatIdSeNuovo(chatId);
+
+        switch (msg.toLowerCase()) {
             case "/start":
                 return handleStartCommand(chatId);
-
             case "/help":
-                return buildMessage(chatId, """
-                    📌 *Comandi disponibili:*
-
-                    /oggi - Eventi economici previsti per *oggi*  
-                    /usa - Eventi in *dollari* (USD)  
-                    /eur - Eventi in *euro* (EUR)  
-                    /top - Eventi ad *alto impatto* ⭐⭐⭐  
-                    /lotto - Calcolo lotti consigliati  
-                    /screenshot - Screenshot grafico M15  
-                    /help - Questo elenco
-                    """);
-
+                return helpMessage(chatId);
             case "/oggi":
                 return buildMessage(chatId, economicEventService.getCalendarioDiOggi());
-
             case "/usa":
                 return buildMessage(chatId, economicEventService.getEventiPerValuta("USD"));
-
             case "/eur":
                 return buildMessage(chatId, economicEventService.getEventiPerValuta("EUR"));
-
             case "/top":
                 return buildMessage(chatId, economicEventService.getEventiAdAltoImpatto());
-
             case "/lotto":
-                return buildMessage(chatId, """
-                    🧮 *Calcolatore Lotto*
-
-                    ✏️ Formato comando:
-                    `/lotto <pair> <capitale> <rischio%> <stoploss pip>`
-
-                    📌 Esempio:
-                    `/lotto EURUSD 2000 1.5 15`
-
-                    👉 Significato:
-                    - *pair*: strumento (es: EURUSD, XAUUSD, US500, ecc.)
-                    - *capitale*: capitale in EUR
-                    - *rischio%*: rischio per trade
-                    - *SL pip*: distanza dello stop loss
-                    """);
-
+                return helpLottoMessage(chatId);
             case "/screenshot":
-                return buildMessage(chatId, """
-                    📸 *Screenshot Grafico*
-
-                    ✏️ Usa il comando così:
-                    `/screenshot EURUSD`
-
-                    🔁 Supportati: EURUSD, GBPUSD, XAUUSD, BTCUSD, US500, US100, GER40
-                    """);
-
+                return helpScreenshotMessage(chatId);
             default:
-                if (msg.startsWith("/lotto ")) {
-                    String[] parts = msg.split(" ");
-                    if (parts.length == 5) {
-                        try {
-                            String pair = parts[1];
-                            double capitale = Double.parseDouble(parts[2]);
-                            double rischio = Double.parseDouble(parts[3]);
-                            double sl = Double.parseDouble(parts[4]);
-                            String risposta = lottoCalculatorService.calcolaLotti(pair, capitale, rischio, sl);
-                            return buildMessage(chatId, risposta);
-                        } catch (NumberFormatException e) {
-                            return buildMessage(chatId, "⚠️ Parametri non validi. Esempio corretto: /lotto EURUSD 2000 1.5 15");
-                        }
-                    } else {
-                        return buildMessage(chatId, "❗ Formato comando errato. Usa: /lotto EURUSD 2000 1.5 15");
-                    }
+                if (msg.toLowerCase().startsWith("/lotto ")) {
+                    return handleLottoCommand(chatId, msg.split(" "));
                 }
-
-                if (msg.startsWith("/screenshot ")) {
-                    String[] parts = msg.split(" ");
-                    if (parts.length == 2) {
-                        String pair = parts[1].toUpperCase();
-                        try {
-                            String imageUrl = screenshotService.getScreenshotUrlForPair(pair);
-                            SendPhoto photo = new SendPhoto();
-                            photo.setChatId(chatId.toString());
-                            photo.setPhoto(new InputFile(imageUrl));
-                            execute(photo);
-                            return null;
-                        } catch (Exception e) {
-                            return buildMessage(chatId, "❌ Errore nel recupero dello screenshot per " + pair);
-                        }
-                    } else {
-                        return buildMessage(chatId, "❗ Usa il formato: /screenshot EURUSD");
-                    }
+                if (msg.toLowerCase().startsWith("/screenshot ")) {
+                    return handleScreenshotCommand(chatId, msg.split(" "));
                 }
-
                 return buildMessage(chatId, "❌ Comando non riconosciuto. Scrivi /help per vedere l'elenco.");
         }
     }
 
-    /**
-     * Esegue ogni giorno alle 8 del mattino e invia gli eventi ad alto impatto.
-     */
+    private BotApiMethod<?> handleLottoCommand(Long chatId, String[] parts) {
+        if (parts.length != 5)
+            return buildMessage(chatId, "❗ Formato comando errato. Usa: /lotto EURUSD 2000 1.5 15");
+        try {
+            String pair = parts[1];
+            double capitale = Double.parseDouble(parts[2]);
+            double rischio = Double.parseDouble(parts[3]);
+            double sl = Double.parseDouble(parts[4]);
+            String risposta = lottoCalculatorService.calcolaLotti(pair, capitale, rischio, sl);
+            return buildMessage(chatId, risposta);
+        } catch (NumberFormatException e) {
+            return buildMessage(chatId, "⚠️ Parametri non validi. Esempio corretto: /lotto EURUSD 2000 1.5 15");
+        }
+    }
+
+    private BotApiMethod<?> handleScreenshotCommand(Long chatId, String[] parts) {
+        if (parts.length != 2) {
+            return buildMessage(chatId, "❗ Usa il formato: /screenshot EURUSD");
+        }
+
+        String pair = parts[1].toUpperCase();
+        try {
+            String imageUrl = screenshotService.getScreenshotUrlForPair(pair);
+            if (imageUrl == null) return buildMessage(chatId, "⚠️ Pair non supportato: " + pair);
+            SendPhoto photo = new SendPhoto();
+            photo.setChatId(chatId.toString());
+            photo.setPhoto(new InputFile(imageUrl));
+            execute(photo);
+            return null;
+        } catch (Exception e) {
+            logger.error("Errore screenshot {}: {}", pair, e.getMessage());
+            return buildMessage(chatId, "❌ Errore nel recupero dello screenshot per " + pair);
+        }
+    }
+
     @Scheduled(cron = "0 0 8 * * *")
     public void invioEventiAdAltoImpattoATutti() {
         String messaggio = economicEventService.getEventiAdAltoImpatto();
-        List<Long> chatIds = getChatIdsFromFile();
-
+        Set<Long> chatIds = getChatIdsFromFile();
         for (Long chatId : chatIds) {
-            SendMessage msg = new SendMessage(chatId.toString(), messaggio);
-            msg.setParseMode("Markdown");
             try {
+                SendMessage msg = new SendMessage(chatId.toString(), messaggio);
+                msg.setParseMode("Markdown");
                 execute(msg);
-                System.out.println("✅ Evento inviato a: " + chatId);
+                logger.info("✅ Evento inviato a: {}", chatId);
             } catch (Exception e) {
-                System.out.println("❌ Errore invio a: " + chatId);
+                logger.error("❌ Errore invio a {}: {}", chatId, e.getMessage());
             }
         }
     }
 
-    private List<Long> getChatIdsFromFile() {
-        Path path = Paths.get("src/main/resources/chat_ids.txt");
-        if (!Files.exists(path)) return new ArrayList<>();
+    private Set<Long> getChatIdsFromFile() {
+        Path path = Paths.get(chatIdsPath);
+        if (!Files.exists(path)) return new HashSet<>();
         try {
-            return Files.readAllLines(path).stream()
+            return new HashSet<>(Files.readAllLines(path).stream()
                     .map(String::trim)
                     .filter(s -> !s.isEmpty())
                     .map(Long::parseLong)
-                    .distinct()
-                    .toList();
+                    .toList());
         } catch (IOException e) {
-            e.printStackTrace();
-            return new ArrayList<>();
+            logger.error("Errore lettura chat_ids.txt: {}", e.getMessage());
+            return new HashSet<>();
         }
     }
 
     private void salvaChatIdSeNuovo(Long chatId) {
-        List<Long> esistenti = getChatIdsFromFile();
+        Set<Long> esistenti = getChatIdsFromFile();
         if (!esistenti.contains(chatId)) {
             try {
-                Files.write(Paths.get("src/main/resources/chat_ids.txt"),
+                Files.write(Paths.get(chatIdsPath),
                         Collections.singletonList(chatId.toString() + "\n"),
-                        Files.exists(Paths.get("src/main/resources/chat_ids.txt"))
-                                ? StandardOpenOption.APPEND
-                                : StandardOpenOption.CREATE);
+                        Files.exists(Paths.get(chatIdsPath)) ? StandardOpenOption.APPEND : StandardOpenOption.CREATE);
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.error("Errore scrittura chatId {}: {}", chatId, e.getMessage());
             }
         }
     }
@@ -209,8 +179,50 @@ public class CalendarBot extends TelegramWebhookBot {
                 Usa /help per vedere i comandi disponibili.
                 """);
         msg.setReplyMarkup(new ReplyKeyboardRemove(true));
-        salvaChatIdSeNuovo(chatId);
         return msg;
+    }
+
+    private SendMessage helpMessage(Long chatId) {
+        return buildMessage(chatId, """
+                📌 *Comandi disponibili:*
+
+                /oggi - Eventi economici previsti per *oggi*  
+                /usa - Eventi in *dollari* (USD)  
+                /eur - Eventi in *euro* (EUR)  
+                /top - Eventi ad *alto impatto* ⭐⭐⭐  
+                /lotto - Calcolo lotti consigliati  
+                /screenshot - Screenshot grafico M15  
+                /help - Questo elenco
+                """);
+    }
+
+    private SendMessage helpLottoMessage(Long chatId) {
+        return buildMessage(chatId, """
+                🧮 *Calcolatore Lotto*
+
+                ✏️ Formato comando:
+                `/lotto <pair> <capitale> <rischio%> <stoploss pip>`
+
+                📌 Esempio:
+                `/lotto EURUSD 2000 1.5 15`
+
+                👉 Significato:
+                - *pair*: strumento (es: EURUSD, XAUUSD, US500, ecc.)
+                - *capitale*: capitale in EUR
+                - *rischio%*: rischio per trade
+                - *SL pip*: distanza dello stop loss
+                """);
+    }
+
+    private SendMessage helpScreenshotMessage(Long chatId) {
+        return buildMessage(chatId, """
+                📸 *Screenshot Grafico*
+
+                ✏️ Usa il comando così:
+                `/screenshot EURUSD`
+
+                🔁 Supportati: EURUSD, GBPUSD, XAUUSD, BTCUSD, US500, US100, GER40
+                """);
     }
 
     private SendMessage buildMessage(Long chatId, String text) {
