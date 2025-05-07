@@ -4,6 +4,7 @@ import com.widebot.economiccalendarbot.model.LottoSession;
 import com.widebot.economiccalendarbot.model.ScreenshotSession;
 import com.widebot.economiccalendarbot.service.EconomicEventService;
 import com.widebot.economiccalendarbot.service.ScreenshotService;
+import com.widebot.economiccalendarbot.utils.MessageBuilder;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -34,6 +35,7 @@ public class CallBackHandler {
         this.keyboardFactory = keyboardFactory;
         this.economicEventService = economicEventService;
     }
+
 
     public Object handle(CallbackQuery callback) {
         String data = callback.getData();
@@ -99,5 +101,23 @@ public class CallBackHandler {
         }
 
         return simple(chatId, "❌ Callback non riconosciuto.");
+
+        // Gestione comandi base dalla tastiera iniziale
+        if (data.equals("/oggi")) {
+            return keyboardFactory.newsLevelKeyboard(chatId);
+        }
+
+        if (data.equals("/lotto")) {
+            return keyboardFactory.lottoPairKeyboard(chatId);
+        }
+
+        if (data.equals("/screenshot")) {
+            return keyboardFactory.screenshotKeyboard(chatId);
+        }
+
+        if (data.equals("/help")) {
+            return  MessageBuilder.help(chatId); // usa il metodo MessageBuilder.help(chatId)
+        }
+
     }
 }
