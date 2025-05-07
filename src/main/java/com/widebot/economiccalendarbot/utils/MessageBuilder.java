@@ -72,9 +72,10 @@ public class MessageBuilder {
         }
     }
 
+    // Screenshot da pair (vecchia versione)
     public static SendPhoto screenshot(Long chatId, String pair, ScreenshotService service) {
         try {
-            String url = service.getScreenshotUrlForPair(pair);
+            String url = service.getScreenshotUrl(pair, "15"); // ← hardcoded
             if (url == null) {
                 SendPhoto error = new SendPhoto();
                 error.setChatId(chatId.toString());
@@ -92,5 +93,13 @@ public class MessageBuilder {
             photo.setCaption("❌ Errore durante il recupero dello screenshot per " + pair);
             return photo;
         }
+    }
+
+    // Screenshot dinamico da URL già costruito (nuova versione)
+    public static SendPhoto screenshot(Long chatId, String imageUrl) {
+        SendPhoto photo = new SendPhoto();
+        photo.setChatId(chatId.toString());
+        photo.setPhoto(new InputFile(imageUrl));
+        return photo;
     }
 }

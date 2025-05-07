@@ -31,26 +31,35 @@ public class ScreenshotService {
     }
 
     /**
-     * Restituisce un URL unico per ottenere lo screenshot aggiornato del grafico TradingView
+     * Genera lo screenshot dinamico di un grafico TradingView con pair e timeframe scelti.
      *
-     * @param pair Symbol del mercato (es: EURUSD)
-     * @return URL dinamico anti-cache oppure null se non supportato
+     * @param pair Symbol dell’asset (es. EURUSD)
+     * @param timeframe Timeframe (es. "15", "60", "240", "1D")
+     * @return URL dinamico anti-cache oppure null se il pair non è valido
      */
-    public String getScreenshotUrlForPair(String pair) {
-        if (pair == null || pair.trim().isEmpty()) return null;
+    public String getScreenshotUrl(String pair, String timeframe) {
+        if (pair == null || timeframe == null) return null;
 
-        String tradingViewSymbol = SYMBOL_MAP.get(pair.toUpperCase());
-        if (tradingViewSymbol == null) return null;
+        String symbol = SYMBOL_MAP.get(pair.toUpperCase());
+        if (symbol == null) return null;
 
-        String chartUrl = "https://www.tradingview.com/chart/?symbol=" +
-                URLEncoder.encode(tradingViewSymbol, StandardCharsets.UTF_8);
-
-        // Timestamp per evitare caching e ottenere sempre lo screenshot aggiornato
         long timestamp = System.currentTimeMillis();
 
+        // URL al widget embed di TradingView con simbolo e intervallo dinamici
+        String widgetUrl = "https://s.tradingview.com/widgetembed/?frameElementId=tradingview_xxx"
+                + "&symbol=" + URLEncoder.encode(symbol, StandardCharsets.UTF_8)
+                + "&interval=" + URLEncoder.encode(timeframe, StandardCharsets.UTF_8)
+                + "&hidesidetoolbar=1"
+                + "&hidetoptoolbar=1"
+                + "&hidelegend=1"
+                + "&theme=dark"
+                + "&style=1"
+                + "&timezone=Europe/Rome";
+
+        // Screenshot API con link dinamico + anti-cache
         return BASE_SCREENSHOT_URL
                 + "?token=" + apiKey
-                + "&url=" + URLEncoder.encode(chartUrl, StandardCharsets.UTF_8)
+                + "&url=" + URLEncoder.encode(widgetUrl, StandardCharsets.UTF_8)
                 + "&output=image"
                 + "&file_type=png"
                 + "&wait_for_event=load"
@@ -61,3 +70,4 @@ public class ScreenshotService {
                 + "&timestamp=" + timestamp;
     }
 }
+

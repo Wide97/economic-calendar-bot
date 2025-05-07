@@ -16,9 +16,23 @@ public class KeyboardFactory {
         message.setParseMode("Markdown");
 
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
-        rows.add(List.of(button("EURUSD"), button("GBPUSD"), button("XAUUSD")));
-        rows.add(List.of(button("BTCUSD"), button("US500"), button("US100")));
-        rows.add(List.of(button("GER40")));
+        rows.add(List.of(screenshotBtn("EURUSD"), screenshotBtn("GBPUSD"), screenshotBtn("XAUUSD")));
+        rows.add(List.of(screenshotBtn("BTCUSD"), screenshotBtn("US500"), screenshotBtn("US100")));
+        rows.add(List.of(screenshotBtn("GER40")));
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        markup.setKeyboard(rows);
+        message.setReplyMarkup(markup);
+        return message;
+    }
+
+    public SendMessage screenshotTimeframeKeyboard(Long chatId) {
+        SendMessage message = new SendMessage(chatId.toString(), "⏱ Seleziona il *timeframe*:");
+        message.setParseMode("Markdown");
+
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        rows.add(List.of(timeframeBtn("15", "M15"), timeframeBtn("60", "H1")));
+        rows.add(List.of(timeframeBtn("240", "H4"), timeframeBtn("1D", "D1")));
 
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         markup.setKeyboard(rows);
@@ -31,9 +45,9 @@ public class KeyboardFactory {
         message.setParseMode("Markdown");
 
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
-        rows.add(List.of(pairBtn("EURUSD"), pairBtn("GBPUSD"), pairBtn("XAUUSD")));
-        rows.add(List.of(pairBtn("BTCUSD"), pairBtn("US500"), pairBtn("US100")));
-        rows.add(List.of(pairBtn("GER40")));
+        rows.add(List.of(lottoBtn("EURUSD"), lottoBtn("GBPUSD"), lottoBtn("XAUUSD")));
+        rows.add(List.of(lottoBtn("BTCUSD"), lottoBtn("US500"), lottoBtn("US100")));
+        rows.add(List.of(lottoBtn("GER40")));
 
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         markup.setKeyboard(rows);
@@ -41,14 +55,21 @@ public class KeyboardFactory {
         return message;
     }
 
-    private InlineKeyboardButton button(String pair) {
+    private InlineKeyboardButton screenshotBtn(String pair) {
         InlineKeyboardButton btn = new InlineKeyboardButton();
         btn.setText(pair);
-        btn.setCallbackData("screenshot_" + pair);
+        btn.setCallbackData("screenshot_pair_" + pair);
         return btn;
     }
 
-    private InlineKeyboardButton pairBtn(String pair) {
+    private InlineKeyboardButton timeframeBtn(String value, String label) {
+        InlineKeyboardButton btn = new InlineKeyboardButton();
+        btn.setText(label);
+        btn.setCallbackData("screenshot_tf_" + value);
+        return btn;
+    }
+
+    private InlineKeyboardButton lottoBtn(String pair) {
         InlineKeyboardButton btn = new InlineKeyboardButton();
         btn.setText(pair);
         btn.setCallbackData("lotto_pair_" + pair);
