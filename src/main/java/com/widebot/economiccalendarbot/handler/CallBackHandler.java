@@ -4,15 +4,13 @@ import com.widebot.economiccalendarbot.model.LottoSession;
 import com.widebot.economiccalendarbot.model.ScreenshotSession;
 import com.widebot.economiccalendarbot.service.EconomicEventService;
 import com.widebot.economiccalendarbot.service.ScreenshotService;
-import com.widebot.economiccalendarbot.utils.MessageBuilder;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 
-import static com.widebot.economiccalendarbot.utils.MessageBuilder.simple;
-import static com.widebot.economiccalendarbot.utils.MessageBuilder.screenshot;
+import static com.widebot.economiccalendarbot.utils.MessageBuilder.*;
 
 @Component
 public class CallBackHandler {
@@ -35,7 +33,6 @@ public class CallBackHandler {
         this.keyboardFactory = keyboardFactory;
         this.economicEventService = economicEventService;
     }
-
 
     public Object handle(CallbackQuery callback) {
         String data = callback.getData();
@@ -100,9 +97,7 @@ public class CallBackHandler {
             return msg;
         }
 
-        return simple(chatId, "❌ Callback non riconosciuto.");
-
-        // Gestione comandi base dalla tastiera iniziale
+        // ✅ NUOVO: gestione callback da welcomeKeyboard
         if (data.equals("/oggi")) {
             return keyboardFactory.newsLevelKeyboard(chatId);
         }
@@ -116,8 +111,9 @@ public class CallBackHandler {
         }
 
         if (data.equals("/help")) {
-            return  MessageBuilder.help(chatId); // usa il metodo MessageBuilder.help(chatId)
+            return help(chatId);
         }
 
+        return simple(chatId, "❌ Callback non riconosciuto.");
     }
 }
