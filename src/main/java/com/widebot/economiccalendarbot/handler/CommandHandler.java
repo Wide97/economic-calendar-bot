@@ -45,8 +45,8 @@ public class CommandHandler {
         // 🔁 Timeout dopo 1 minuto di inattività
         if (activityTracker.isInactive(chatId)) {
             sessionManager.clear(chatId);
-            activityTracker.clear(chatId);
-            activityTracker.updateActivity(chatId);
+            activityTracker.clear(chatId); // reset tracker
+            activityTracker.updateActivity(chatId); // aggiorna ORA che hai resettato
 
             SendMessage resetMessage = new SendMessage();
             resetMessage.setChatId(chatId.toString());
@@ -67,6 +67,9 @@ public class CommandHandler {
 
             return resetMessage;
         }
+
+        // ⏱️ AGGIORNA QUI solo se NON è scaduto
+        activityTracker.updateActivity(chatId);
 
 
         // 🧮 Flusso guidato lotto
