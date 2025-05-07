@@ -30,7 +30,7 @@ public class EconomicEventService {
 
     private Document fetchCalendarPage() throws IOException {
         return Jsoup.connect(CALENDAR_URL)
-                .userAgent("Mozilla/5.0") // evitare blocchi
+                .userAgent("Mozilla/5.0")
                 .get();
     }
 
@@ -57,7 +57,7 @@ public class EconomicEventService {
                 String paese = el.select(SELECTOR_COUNTRY_TITLE).attr("title").trim();
 
                 if (!ora.isBlank() && !titolo.isBlank()) {
-                    EconomicEvent evento = new EconomicEvent(ora, valuta, paese, stelle, titolo); // ordine corretto
+                    EconomicEvent evento = new EconomicEvent(ora, valuta, paese, stelle, titolo);
                     if (filtro.test(evento)) {
                         eventi.add(evento);
                     }
@@ -68,7 +68,7 @@ public class EconomicEventService {
                 return "⚠️ Nessun evento trovato con i criteri richiesti.";
             }
 
-            eventi.forEach(ev -> calendario.append(formatEvent(ev, mostraValuta)));
+            eventi.forEach(ev -> calendario.append(formatEventDetailed(ev)));
 
         } catch (IOException e) {
             log.error("❌ Errore Jsoup: {}", e.getMessage(), e);
@@ -78,14 +78,13 @@ public class EconomicEventService {
         return calendario.toString();
     }
 
-    private String formatEvent(EconomicEvent ev, boolean mostraValuta) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("⏰ ").append(ev.getOra()).append(" - ");
-        if (mostraValuta && !ev.getValuta().isBlank()) {
-            sb.append("[").append(ev.getValuta()).append("] ");
-        }
-        sb.append(ev.getTitolo()).append(" (").append(ev.getStelle()).append("⭐)").append("\n");
-        return sb.toString();
+    private String formatEventDetailed(EconomicEvent ev) {
+        return """
+                ————————————————————————
+                ⏰ %s – [%s] %s (%d⭐)
+                🌍 Paese: %s
+                                
+                """.formatted(ev.getOra(), ev.getValuta(), ev.getTitolo(), ev.getStelle(), ev.getPaese());
     }
 
     public String getCalendarioDiOggi() {
@@ -105,5 +104,10 @@ public class EconomicEventService {
     public String getEventiPerPaese(String nomePaese) {
         return parseEventi("📅 Eventi macro per " + nomePaese + ":",
                 ev -> ev.getPaese().equalsIgnoreCase(nomePaese), true);
+    }
+
+    public String getEventiPerLivello(int stelle) {
+        return parseEventi("🗓️ Eventi con impatto " + stelle + "⭐:",
+                ev -> ev.getStelle() == stelle, true);
     }
 }

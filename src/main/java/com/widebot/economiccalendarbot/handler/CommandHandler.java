@@ -82,7 +82,7 @@ public class CommandHandler {
         return switch (text.toLowerCase()) {
             case "/start" -> start(chatId);
             case "/help" -> help(chatId);
-            case "/oggi" -> simple(chatId, economicEventService.getCalendarioDiOggi());
+            case "/oggi" -> keyboardFactory.newsLevelKeyboard(chatId); // 🔁 QUI il cambiamento
             case "/usa" -> simple(chatId, economicEventService.getEventiPerValuta("USD"));
             case "/eur" -> simple(chatId, economicEventService.getEventiPerValuta("EUR"));
             case "/top" -> simple(chatId, economicEventService.getEventiAdAltoImpatto());

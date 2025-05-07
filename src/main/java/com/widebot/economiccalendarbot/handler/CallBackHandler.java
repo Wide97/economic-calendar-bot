@@ -2,9 +2,11 @@ package com.widebot.economiccalendarbot.handler;
 
 import com.widebot.economiccalendarbot.model.LottoSession;
 import com.widebot.economiccalendarbot.model.ScreenshotSession;
+import com.widebot.economiccalendarbot.service.EconomicEventService;
 import com.widebot.economiccalendarbot.service.ScreenshotService;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 
@@ -18,16 +20,19 @@ public class CallBackHandler {
     private final LottoSessionManager lottoSessionManager;
     private final ScreenshotSessionManager screenshotSessionManager;
     private final KeyboardFactory keyboardFactory;
+    private final EconomicEventService economicEventService;
 
     public CallBackHandler(
             ScreenshotService screenshotService,
             LottoSessionManager lottoSessionManager,
             ScreenshotSessionManager screenshotSessionManager,
-            KeyboardFactory keyboardFactory) {
+            KeyboardFactory keyboardFactory,
+            EconomicEventService economicEventService) {
         this.screenshotService = screenshotService;
         this.lottoSessionManager = lottoSessionManager;
         this.screenshotSessionManager = screenshotSessionManager;
         this.keyboardFactory = keyboardFactory;
+        this.economicEventService = economicEventService;
     }
 
     public Object handle(CallbackQuery callback) {
@@ -66,7 +71,7 @@ public class CallBackHandler {
             screenshotSessionManager.clear(chatId);
 
             SendPhoto photo = screenshot(chatId, imageUrl);
-            photo.setCaption("📸 *" + session.getPair() + "* – *" + timeframe + "*"); // opzionale caption
+            photo.setCaption("📸 *" + session.getPair() + "* – *" + timeframe + "*");
             return photo;
         }
 
@@ -76,6 +81,21 @@ public class CallBackHandler {
             LottoSession session = lottoSessionManager.getOrCreate(chatId);
             session.setPair(pair);
             return simple(chatId, "✏️ Inserisci il *capitale* in EUR:");
+        }
+
+        // News economiche: scelta numero stelle
+        if (data.equals("news_1star") || data.equals("news_2star") || data.equals("news_3star")) {
+            int stelle = switch (data) {
+                case "news_1star" -> 1;
+                case "news_2star" -> 2;
+                case "news_3star" -> 3;
+                default -> 1;
+            };
+
+            String eventi = economicEventService.getEventiPerLivello(stelle);
+            SendMessage msg = new SendMessage(chatId.toString(), eventi);
+            msg.setParseMode("Markdown");
+            return msg;
         }
 
         return simple(chatId, "❌ Callback non riconosciuto.");

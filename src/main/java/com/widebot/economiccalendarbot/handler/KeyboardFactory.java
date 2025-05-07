@@ -50,6 +50,29 @@ public class KeyboardFactory {
         return message;
     }
 
+    public SendMessage newsLevelKeyboard(Long chatId) {
+        SendMessage message = new SendMessage(chatId.toString(), "📅 Seleziona il livello di impatto delle notizie economiche di oggi:");
+        message.setParseMode("Markdown");
+
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        rows.add(List.of(newsBtn("1", "⭐ 1 Stella")));
+        rows.add(List.of(newsBtn("2", "⭐⭐ 2 Stelle")));
+        rows.add(List.of(newsBtn("3", "⭐⭐⭐ 3 Stelle")));
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        markup.setKeyboard(rows);
+        message.setReplyMarkup(markup);
+
+        return message;
+    }
+
+    private InlineKeyboardButton newsBtn(String stelle, String label) {
+        InlineKeyboardButton btn = new InlineKeyboardButton();
+        btn.setText(label);
+        btn.setCallbackData("news_" + stelle + "star");
+        return btn;
+    }
+
     private List<List<InlineKeyboardButton>> screenshotRows() {
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
         rows.add(List.of(screenshotBtn("EURUSD"), screenshotBtn("GBPUSD"), screenshotBtn("XAUUSD")));
