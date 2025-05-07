@@ -109,4 +109,21 @@ public class KeyboardFactory {
         btn.setCallbackData("lotto_pair_" + pair);
         return btn;
     }
+
+    public InlineKeyboardMarkup welcomeKeyboard() {
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+
+        rows.add(List.of(
+                InlineKeyboardButton.builder().text("📅 Oggi").callbackData("/oggi").build(),
+                InlineKeyboardButton.builder().text("🧮 Lotto").callbackData("/lotto").build()
+        ));
+
+        rows.add(List.of(
+                InlineKeyboardButton.builder().text("📷 Screenshot").callbackData("/screenshot").build(),
+                InlineKeyboardButton.builder().text("📖 Help").callbackData("/help").build()
+        ));
+
+        return InlineKeyboardMarkup.builder().keyboard(rows).build();
+    }
+
 }

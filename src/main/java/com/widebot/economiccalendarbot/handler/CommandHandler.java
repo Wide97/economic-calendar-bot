@@ -5,6 +5,7 @@ import com.widebot.economiccalendarbot.service.EconomicEventService;
 import com.widebot.economiccalendarbot.service.LottoCalculatorService;
 import com.widebot.economiccalendarbot.service.ScreenshotService;
 import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
 import static com.widebot.economiccalendarbot.utils.MessageBuilder.*;
@@ -43,14 +44,30 @@ public class CommandHandler {
 
         // 🔁 Timeout dopo 1 minuto di inattività
         if (activityTracker.isInactive(chatId)) {
-            sessionManager.clear(chatId); // reset sessione
-            activityTracker.clear(chatId); // reset activity
-            activityTracker.updateActivity(chatId); // aggiorna subito per questa interazione
-            return simple(chatId, "⌛ *Sessione scaduta per inattività.*\n\n" + start(chatId).getText());
+            sessionManager.clear(chatId);
+            activityTracker.clear(chatId);
+            activityTracker.updateActivity(chatId);
+
+            SendMessage resetMessage = new SendMessage();
+            resetMessage.setChatId(chatId.toString());
+            resetMessage.setParseMode("Markdown");
+            resetMessage.setText("""
+            🧹-------------------------
+
+            ⌛ *Sessione scaduta per inattività.*
+
+            👋 *Benvenuto nel Calendario Economico Bot!*
+
+            ✅ Tutto è pronto.
+            Scegli una delle opzioni qui sotto 👇
+
+            -------------------------🧹
+            """);
+            resetMessage.setReplyMarkup(keyboardFactory.welcomeKeyboard());
+
+            return resetMessage;
         }
 
-        // 🕒 Aggiorna ultima attività utente
-        activityTracker.updateActivity(chatId);
 
         // 🧮 Flusso guidato lotto
         LottoSession session = sessionManager.getOrCreate(chatId);
