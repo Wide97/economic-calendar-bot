@@ -18,19 +18,22 @@ public class CommandHandler {
     private final KeyboardFactory keyboardFactory;
     private final ChatIdRepository chatIdRepository;
     private final LottoSessionManager sessionManager;
+    private final UserActivityTracker activityTracker;
 
     public CommandHandler(EconomicEventService economicEventService,
                           LottoCalculatorService lottoCalculatorService,
                           ScreenshotService screenshotService,
                           KeyboardFactory keyboardFactory,
                           ChatIdRepository chatIdRepository,
-                          LottoSessionManager sessionManager) {
+                          LottoSessionManager sessionManager,
+                          UserActivityTracker activityTracker) {
         this.economicEventService = economicEventService;
         this.lottoCalculatorService = lottoCalculatorService;
         this.screenshotService = screenshotService;
         this.keyboardFactory = keyboardFactory;
         this.chatIdRepository = chatIdRepository;
         this.sessionManager = sessionManager;
+        this.activityTracker = activityTracker;
     }
 
     public Object handle(Message message) {
@@ -38,7 +41,18 @@ public class CommandHandler {
         String text = message.getText().trim();
         chatIdRepository.saveIfNew(chatId);
 
-        // Flusso guidato lotto
+        // 🔁 Timeout dopo 1 minuto di inattività
+        if (activityTracker.isInactive(chatId)) {
+            sessionManager.clear(chatId); // reset sessione
+            activityTracker.clear(chatId); // reset activity
+            activityTracker.updateActivity(chatId); // aggiorna subito per questa interazione
+            return simple(chatId, "⌛ *Sessione scaduta per inattività.*\n\n" + start(chatId).getText());
+        }
+
+        // 🕒 Aggiorna ultima attività utente
+        activityTracker.updateActivity(chatId);
+
+        // 🧮 Flusso guidato lotto
         LottoSession session = sessionManager.getOrCreate(chatId);
 
         if ("/lotto".equalsIgnoreCase(text)) {
@@ -82,7 +96,7 @@ public class CommandHandler {
         return switch (text.toLowerCase()) {
             case "/start" -> start(chatId);
             case "/help" -> help(chatId);
-            case "/oggi" -> keyboardFactory.newsLevelKeyboard(chatId); // 🔁 QUI il cambiamento
+            case "/oggi" -> keyboardFactory.newsLevelKeyboard(chatId);
             case "/usa" -> simple(chatId, economicEventService.getEventiPerValuta("USD"));
             case "/eur" -> simple(chatId, economicEventService.getEventiPerValuta("EUR"));
             case "/top" -> simple(chatId, economicEventService.getEventiAdAltoImpatto());
