@@ -15,13 +15,8 @@ public class KeyboardFactory {
         SendMessage message = new SendMessage(chatId.toString(), "📸 Seleziona un asset:");
         message.setParseMode("Markdown");
 
-        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
-        rows.add(List.of(screenshotBtn("EURUSD"), screenshotBtn("GBPUSD"), screenshotBtn("XAUUSD")));
-        rows.add(List.of(screenshotBtn("BTCUSD"), screenshotBtn("US500"), screenshotBtn("US100")));
-        rows.add(List.of(screenshotBtn("GER40")));
-
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
-        markup.setKeyboard(rows);
+        markup.setKeyboard(screenshotRows());
         message.setReplyMarkup(markup);
         return message;
     }
@@ -30,29 +25,45 @@ public class KeyboardFactory {
         SendMessage message = new SendMessage(chatId.toString(), "⏱ Seleziona il *timeframe*:");
         message.setParseMode("Markdown");
 
+        InlineKeyboardMarkup markup = screenshotTimeframeMarkup();
+        message.setReplyMarkup(markup);
+        return message;
+    }
+
+    public InlineKeyboardMarkup screenshotTimeframeMarkup() {
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
         rows.add(List.of(timeframeBtn("15", "M15"), timeframeBtn("60", "H1")));
         rows.add(List.of(timeframeBtn("240", "H4"), timeframeBtn("1D", "D1")));
 
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         markup.setKeyboard(rows);
-        message.setReplyMarkup(markup);
-        return message;
+        return markup;
     }
 
     public SendMessage lottoPairKeyboard(Long chatId) {
         SendMessage message = new SendMessage(chatId.toString(), "📊 *Calcolo Lotto*\n\nScegli il *pair*:");
         message.setParseMode("Markdown");
 
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        markup.setKeyboard(lottoRows());
+        message.setReplyMarkup(markup);
+        return message;
+    }
+
+    private List<List<InlineKeyboardButton>> screenshotRows() {
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        rows.add(List.of(screenshotBtn("EURUSD"), screenshotBtn("GBPUSD"), screenshotBtn("XAUUSD")));
+        rows.add(List.of(screenshotBtn("BTCUSD"), screenshotBtn("US500"), screenshotBtn("US100")));
+        rows.add(List.of(screenshotBtn("GER40")));
+        return rows;
+    }
+
+    private List<List<InlineKeyboardButton>> lottoRows() {
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
         rows.add(List.of(lottoBtn("EURUSD"), lottoBtn("GBPUSD"), lottoBtn("XAUUSD")));
         rows.add(List.of(lottoBtn("BTCUSD"), lottoBtn("US500"), lottoBtn("US100")));
         rows.add(List.of(lottoBtn("GER40")));
-
-        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
-        markup.setKeyboard(rows);
-        message.setReplyMarkup(markup);
-        return message;
+        return rows;
     }
 
     private InlineKeyboardButton screenshotBtn(String pair) {
