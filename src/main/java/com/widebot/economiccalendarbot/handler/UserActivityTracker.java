@@ -8,7 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class UserActivityTracker {
     private final Map<Long, Long> lastSeenMap = new ConcurrentHashMap<>();
-    private static final long TIMEOUT_MS = 60_000; // 1 minuto
+    private static final long TIMEOUT_MS = 120_000; // 1 minuto
 
     public boolean isInactive(Long chatId) {
         Long last = lastSeenMap.get(chatId);
