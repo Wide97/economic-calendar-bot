@@ -1,7 +1,7 @@
 package com.widebot.economiccalendarbot.handler;
 
 import com.widebot.economiccalendarbot.model.LottoSession;
-import com.widebot.economiccalendarbot.model.ScreenshotSession;
+//import com.widebot.economiccalendarbot.model.ScreenshotSession;
 import com.widebot.economiccalendarbot.service.EconomicEventService;
 //import com.widebot.economiccalendarbot.service.ScreenshotService;
 import org.springframework.stereotype.Component;
