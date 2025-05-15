@@ -3,7 +3,7 @@ package com.widebot.economiccalendarbot.handler;
 import com.widebot.economiccalendarbot.model.LottoSession;
 import com.widebot.economiccalendarbot.model.ScreenshotSession;
 import com.widebot.economiccalendarbot.service.EconomicEventService;
-import com.widebot.economiccalendarbot.service.ScreenshotService;
+//import com.widebot.economiccalendarbot.service.ScreenshotService;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -15,21 +15,21 @@ import static com.widebot.economiccalendarbot.utils.MessageBuilder.*;
 @Component
 public class CallBackHandler {
 
-    private final ScreenshotService screenshotService;
+//    private final ScreenshotService screenshotService;
     private final LottoSessionManager lottoSessionManager;
-    private final ScreenshotSessionManager screenshotSessionManager;
+//    private final ScreenshotSessionManager screenshotSessionManager;
     private final KeyboardFactory keyboardFactory;
     private final EconomicEventService economicEventService;
 
     public CallBackHandler(
-            ScreenshotService screenshotService,
+//            ScreenshotService screenshotService,
             LottoSessionManager lottoSessionManager,
-            ScreenshotSessionManager screenshotSessionManager,
+//            ScreenshotSessionManager screenshotSessionManager,
             KeyboardFactory keyboardFactory,
             EconomicEventService economicEventService) {
-        this.screenshotService = screenshotService;
+//        this.screenshotService = screenshotService;
         this.lottoSessionManager = lottoSessionManager;
-        this.screenshotSessionManager = screenshotSessionManager;
+//        this.screenshotSessionManager = screenshotSessionManager;
         this.keyboardFactory = keyboardFactory;
         this.economicEventService = economicEventService;
     }
@@ -39,40 +39,40 @@ public class CallBackHandler {
         Long chatId = callback.getMessage().getChatId();
         int messageId = callback.getMessage().getMessageId();
 
-        // Screenshot: Step 1 - scelta pair → modifica messaggio
-        if (data.startsWith("screenshot_pair_")) {
-            String pair = data.replace("screenshot_pair_", "");
-            ScreenshotSession session = screenshotSessionManager.getOrCreate(chatId);
-            session.setPair(pair);
+//        // Screenshot: Step 1 - scelta pair → modifica messaggio
+//        if (data.startsWith("screenshot_pair_")) {
+//            String pair = data.replace("screenshot_pair_", "");
+//            ScreenshotSession session = screenshotSessionManager.getOrCreate(chatId);
+//            session.setPair(pair);
+//
+//            EditMessageText edit = new EditMessageText();
+//            edit.setChatId(chatId.toString());
+//            edit.setMessageId(messageId);
+//            edit.setText("⏱ Seleziona il *timeframe*:");
+//            edit.setParseMode("Markdown");
+//            edit.setReplyMarkup(keyboardFactory.screenshotTimeframeMarkup());
+//
+//            return edit;
+//        }
 
-            EditMessageText edit = new EditMessageText();
-            edit.setChatId(chatId.toString());
-            edit.setMessageId(messageId);
-            edit.setText("⏱ Seleziona il *timeframe*:");
-            edit.setParseMode("Markdown");
-            edit.setReplyMarkup(keyboardFactory.screenshotTimeframeMarkup());
-
-            return edit;
-        }
-
-        // Screenshot: Step 2 - scelta timeframe → invia screenshot
-        if (data.startsWith("screenshot_tf_")) {
-            String timeframe = data.replace("screenshot_tf_", "");
-            ScreenshotSession session = screenshotSessionManager.getOrCreate(chatId);
-
-            if (session.getPair() == null) {
-                screenshotSessionManager.clear(chatId);
-                return simple(chatId, "❌ Pair non selezionato. Usa /screenshot per riprovare.");
-            }
-
-            session.setTimeframe(timeframe);
-            String imageUrl = screenshotService.getScreenshotUrl(session.getPair(), timeframe);
-            screenshotSessionManager.clear(chatId);
-
-            SendPhoto photo = screenshot(chatId, imageUrl);
-            photo.setCaption("📸 *" + session.getPair() + "* – *" + timeframe + "*");
-            return photo;
-        }
+//        // Screenshot: Step 2 - scelta timeframe → invia screenshot
+//        if (data.startsWith("screenshot_tf_")) {
+//            String timeframe = data.replace("screenshot_tf_", "");
+//            ScreenshotSession session = screenshotSessionManager.getOrCreate(chatId);
+//
+//            if (session.getPair() == null) {
+//                screenshotSessionManager.clear(chatId);
+//                return simple(chatId, "❌ Pair non selezionato. Usa /screenshot per riprovare.");
+//            }
+//
+//            session.setTimeframe(timeframe);
+//            String imageUrl = screenshotService.getScreenshotUrl(session.getPair(), timeframe);
+//            screenshotSessionManager.clear(chatId);
+//
+//            SendPhoto photo = screenshot(chatId, imageUrl);
+//            photo.setCaption("📸 *" + session.getPair() + "* – *" + timeframe + "*");
+//            return photo;
+//        }
 
         // Lotto: scelta pair
         if (data.startsWith("lotto_pair_")) {
@@ -106,9 +106,9 @@ public class CallBackHandler {
             return keyboardFactory.lottoPairKeyboard(chatId);
         }
 
-        if (data.equals("/screenshot")) {
-            return keyboardFactory.screenshotKeyboard(chatId);
-        }
+//        if (data.equals("/screenshot")) {
+//            return keyboardFactory.screenshotKeyboard(chatId);
+//        }
 
         if (data.equals("/help")) {
             return help(chatId);
